@@ -8,8 +8,9 @@ import STATUSES from 'data/STATUSES'
 import {CastEvent} from 'fflogs'
 import _ from 'lodash'
 import Module, {dependency} from 'parser/core/Module'
+import {Invulnerability} from 'parser/core/modules/Invulnerability'
 import Suggestions, {SEVERITY, TieredSuggestion} from 'parser/core/modules/Suggestions'
-import Timeline from 'parser/core/modules/Timeline'
+import {Timeline} from 'parser/core/modules/Timeline'
 import React from 'react'
 import {matchClosestLower} from 'utilities'
 
@@ -18,15 +19,10 @@ interface TimestampRotationMap {
 }
 
 const SEVERETIES = {
-	MISSED_CIRCLE_OF_SCORN: {
+	MISSED_OGCDS: {
 		1: SEVERITY.MINOR,
-		2: SEVERITY.MEDIUM,
-		4: SEVERITY.MAJOR,
-	},
-	MISSED_SPIRIT_WITHIN: {
-		1: SEVERITY.MINOR,
-		2: SEVERITY.MEDIUM,
-		4: SEVERITY.MAJOR,
+		4: SEVERITY.MEDIUM,
+		8: SEVERITY.MAJOR,
 	},
 	MISSED_GORING: {
 		1: SEVERITY.MINOR,
@@ -56,10 +52,24 @@ const CONSTANTS = {
 	CIRCLE_OF_SCORN: {
 		EXPECTED: 1,
 	},
+	INTERVENE: {
+		EXPECTED: 1,
+	},
 	GCD: {
-		EXPECTED: 10,
+		EXPECTED: 11,
 	},
 }
+
+// These GCDs should not count towards the FoF GCD counter, as they are not
+// physical damage (weaponskill) GCDs.
+const EXCLUDED_GCD_IDS = [
+	ACTIONS.CLEMENCY.id,
+	ACTIONS.HOLY_SPIRIT.id,
+	ACTIONS.HOLY_CIRCLE.id,
+	ACTIONS.CONFITEOR.id,
+]
+
+const FOF_DURATION_MILLIS = STATUSES.FIGHT_OR_FLIGHT.duration * 1000
 
 class FightOrFlightState {
 	start: number | null = null
@@ -68,6 +78,8 @@ class FightOrFlightState {
 	goringCounter: number = 0
 	circleOfScornCounter: number = 0
 	spiritsWithinCounter: number = 0
+	interveneCounter: number = 0
+	isRushed: boolean = false
 }
 
 class FightOrFlightErrorResult {
@@ -75,6 +87,7 @@ class FightOrFlightErrorResult {
 	missedGorings: number = 0
 	missedSpiritWithins: number = 0
 	missedCircleOfScorns: number = 0
+	missedIntervenes: number = 0
 	goringTooCloseCounter: number = 0
 }
 
@@ -84,6 +97,7 @@ export default class FightOrFlight extends Module {
 
 	@dependency private suggestions!: Suggestions
 	@dependency private timeline!: Timeline
+	@dependency private invuln!: Invulnerability
 
 	// Internal State Counters
 	// ToDo: Merge some of these, so instead of saving rotations, make the rotation part of FoFState, so we can reduce the error result out of the saved rotations
@@ -92,8 +106,8 @@ export default class FightOrFlight extends Module {
 	private fofErrorResult = new FightOrFlightErrorResult()
 
 	protected init() {
-		this.addHook('cast', {by: 'player'}, this.onCast)
-		this.addHook(
+		this.addEventHook('cast', {by: 'player'}, this.onCast)
+		this.addEventHook(
 			'removebuff',
 			{
 				by: 'player',
@@ -102,7 +116,7 @@ export default class FightOrFlight extends Module {
 			},
 			this.onRemoveFightOrFlight,
 		)
-		this.addHook('complete', this.onComplete)
+		this.addEventHook('complete', this.onComplete)
 	}
 
 	private onCast(event: CastEvent) {
@@ -114,13 +128,18 @@ export default class FightOrFlight extends Module {
 
 		if (actionId === ACTIONS.FIGHT_OR_FLIGHT.id) {
 			this.fofState.start = event.timestamp
+
+			const endOfWindow = event.timestamp + FOF_DURATION_MILLIS
+			this.fofState.isRushed = endOfWindow >= this.parser.fight.end_time
+				|| this.invuln.isInvulnerable('all', endOfWindow)
+				|| this.invuln.isUntargetable('all', endOfWindow)
 		}
 
 		if (this.fofState.start) {
 			const action = getDataBy(ACTIONS, 'id', actionId) as TODO // Should be an Action type
 			if (!action) { return }
 
-			if (action.onGcd) {
+			if (action.onGcd && !EXCLUDED_GCD_IDS.includes(action.id)) {
 				this.fofState.gcdCounter++
 			}
 
@@ -129,7 +148,8 @@ export default class FightOrFlight extends Module {
 					this.fofState.goringCounter++
 
 					if (this.fofState.lastGoringGcd !== null) {
-						if (this.fofState.gcdCounter - this.fofState.lastGoringGcd < CONSTANTS.GORING.MINIMUM_DISTANCE) {
+						if (this.fofState.gcdCounter - this.fofState.lastGoringGcd < CONSTANTS.GORING.MINIMUM_DISTANCE
+							&& !this.fofState.isRushed) {
 							this.fofErrorResult.goringTooCloseCounter++
 						}
 					}
@@ -140,6 +160,9 @@ export default class FightOrFlight extends Module {
 					break
 				case ACTIONS.SPIRITS_WITHIN.id:
 					this.fofState.spiritsWithinCounter++
+					break
+				case ACTIONS.INTERVENE.id:
+					this.fofState.interveneCounter++
 					break
 			}
 
@@ -152,22 +175,27 @@ export default class FightOrFlight extends Module {
 	}
 
 	private onRemoveFightOrFlight() {
-		this.fofErrorResult.missedGcds += Math.max(0, CONSTANTS.GCD.EXPECTED - this.fofState.gcdCounter)
-		this.fofErrorResult.missedGorings += Math.max(0, CONSTANTS.GORING.EXPECTED - this.fofState.goringCounter)
-		this.fofErrorResult.missedSpiritWithins += Math.max(0, CONSTANTS.SPIRITS_WITHIN.EXPECTED - this.fofState.spiritsWithinCounter)
-		this.fofErrorResult.missedCircleOfScorns += Math.max(0, CONSTANTS.CIRCLE_OF_SCORN.EXPECTED - this.fofState.circleOfScornCounter)
+		if (!this.fofState.isRushed) {
+			this.fofErrorResult.missedGcds += Math.max(0, CONSTANTS.GCD.EXPECTED - this.fofState.gcdCounter)
+			this.fofErrorResult.missedGorings += Math.max(0, CONSTANTS.GORING.EXPECTED - this.fofState.goringCounter)
+			this.fofErrorResult.missedSpiritWithins += Math.max(0, CONSTANTS.SPIRITS_WITHIN.EXPECTED - this.fofState.spiritsWithinCounter)
+			this.fofErrorResult.missedCircleOfScorns += Math.max(0, CONSTANTS.CIRCLE_OF_SCORN.EXPECTED - this.fofState.circleOfScornCounter)
+			this.fofErrorResult.missedIntervenes += Math.max(0, CONSTANTS.INTERVENE.EXPECTED - this.fofState.interveneCounter)
+		}
 
 		this.fofState = new FightOrFlightState()
 	}
 
 	private onComplete() {
+		const missedOgcds = this.fofErrorResult.missedSpiritWithins + this.fofErrorResult.missedCircleOfScorns + this.fofErrorResult.missedIntervenes
+
 		this.suggestions.add(new TieredSuggestion({
 			icon: ACTIONS.FIGHT_OR_FLIGHT.icon,
 			content: <Trans id="pld.fightorflight.suggestions.gcds.content">
-				Try to land 10 GCDs during every <ActionLink {...ACTIONS.FIGHT_OR_FLIGHT}/> window.
+				Try to land 11 physical GCDs during every <ActionLink {...ACTIONS.FIGHT_OR_FLIGHT}/> window.
 			</Trans>,
 			why: <Trans id="pld.fightorflight.suggestions.gcds.why">
-				<Plural value={this.fofErrorResult.missedGcds} one="# GCD" other="# GCDs"/> missed during <StatusLink {...STATUSES.FIGHT_OR_FLIGHT}/> windows.
+				<Plural value={this.fofErrorResult.missedGcds} one="# physical GCD" other="# physical GCDs"/> missed during <StatusLink {...STATUSES.FIGHT_OR_FLIGHT}/> windows.
 			</Trans>,
 			tiers: SEVERETIES.MISSED_GCD,
 			value: this.fofErrorResult.missedGcds,
@@ -176,8 +204,8 @@ export default class FightOrFlight extends Module {
 		this.suggestions.add(new TieredSuggestion({
 			icon: ACTIONS.GORING_BLADE.icon,
 			content: <Trans id="pld.fightorflight.suggestions.goring-blade.content">
-				Try to land 2 <ActionLink {...ACTIONS.GORING_BLADE}/> during
-				every <ActionLink {...ACTIONS.FIGHT_OR_FLIGHT}/> window. One at the beginning and one at the end.
+				Try to land 2 <ActionLink {...ACTIONS.GORING_BLADE}/> applications during
+				every <ActionLink {...ACTIONS.FIGHT_OR_FLIGHT}/> window: one at the beginning and one at the end.
 			</Trans>,
 			why: <Trans id="pld.fightorflight.suggestions.goring-blade.why">
 				<Plural value={this.fofErrorResult.missedGorings} one="# application" other="# applications"/> missed during <StatusLink {...STATUSES.FIGHT_OR_FLIGHT}/> windows.
@@ -188,28 +216,15 @@ export default class FightOrFlight extends Module {
 
 		this.suggestions.add(new TieredSuggestion({
 			icon: ACTIONS.SPIRITS_WITHIN.icon,
-			content: <Trans id="pld.fightorflight.suggestions.spirits-within.content">
-				Try to land one <ActionLink {...ACTIONS.SPIRITS_WITHIN}/> during
+			content: <Trans id="pld.fightorflight.suggestions.ogcds.content">
+				Try to land at least one cast of each of your off-GCD skills during
 				every <ActionLink {...ACTIONS.FIGHT_OR_FLIGHT}/> window.
 			</Trans>,
-			why: <Trans id="pld.fightorflight.suggestions.spirits-within.why">
-				<Plural value={this.fofErrorResult.missedSpiritWithins} one="# usage" other="# usages"/> missed during <StatusLink {...STATUSES.FIGHT_OR_FLIGHT}/> windows.
+			why: <Trans id="pld.fightorflight.suggestions.ogcds.why">
+				<Plural value={missedOgcds} one="# usage" other="# usages"/> missed during <StatusLink {...STATUSES.FIGHT_OR_FLIGHT}/> windows.
 			</Trans>,
-			tiers: SEVERETIES.MISSED_SPIRIT_WITHIN,
-			value: this.fofErrorResult.missedSpiritWithins,
-		}))
-
-		this.suggestions.add(new TieredSuggestion({
-			icon: ACTIONS.CIRCLE_OF_SCORN.icon,
-			content: <Trans id="pld.fightorflight.suggestions.circle-of-scorn.content">
-				Try to land one <ActionLink {...ACTIONS.CIRCLE_OF_SCORN}/> during
-				every <ActionLink {...ACTIONS.FIGHT_OR_FLIGHT}/> window.
-			</Trans>,
-			why: <Trans id="pld.fightorflight.suggestions.circle-of-scorn.why">
-				<Plural value={this.fofErrorResult.missedCircleOfScorns} one="# usage" other="# usages"/> missed during <StatusLink {...STATUSES.FIGHT_OR_FLIGHT}/> windows.
-			</Trans>,
-			tiers: SEVERETIES.MISSED_CIRCLE_OF_SCORN,
-			value: this.fofErrorResult.missedCircleOfScorns,
+			tiers: SEVERETIES.MISSED_OGCDS,
+			value: missedOgcds,
 		}))
 
 		this.suggestions.add(new TieredSuggestion({
@@ -235,7 +250,8 @@ export default class FightOrFlight extends Module {
 	private countGCDs(rotation: CastEvent[]) {
 		return rotation.reduce((sum, event) => {
 			const action = getDataBy(ACTIONS, 'id', event.ability.guid) as TODO
-			return sum + (action && action.onGcd ? 1 : 0)
+			const include = (action.onGcd && !EXCLUDED_GCD_IDS.includes(action.id)) ? 1 : 0
+			return sum + include
 		}, 0)
 	}
 
@@ -253,6 +269,10 @@ export default class FightOrFlight extends Module {
 				{
 					header: <ActionLink showName={false} {...ACTIONS.CIRCLE_OF_SCORN}/>,
 					accessor: 'circleOfScorn',
+				},
+				{
+					header: <ActionLink showName={false} {...ACTIONS.INTERVENE}/>,
+					accessor: 'intervene',
 				},
 				{
 					header: <ActionLink showName={false} {...ACTIONS.GORING_BLADE}/>,
@@ -277,6 +297,10 @@ export default class FightOrFlight extends Module {
 						circleOfScorn: {
 							actual: this.countAbility(rotation, ACTIONS.CIRCLE_OF_SCORN.id),
 							expected: CONSTANTS.CIRCLE_OF_SCORN.EXPECTED,
+						},
+						intervene: {
+							actual: this.countAbility(rotation, ACTIONS.INTERVENE.id),
+							expected: CONSTANTS.INTERVENE.EXPECTED,
 						},
 						goring: {
 							actual: this.countAbility(rotation, ACTIONS.GORING_BLADE.id),

@@ -1,8 +1,6 @@
 import React from 'react'
 import {Icon, Message} from 'semantic-ui-react'
 import CONTRIBUTORS, {ROLES} from 'data/CONTRIBUTORS'
-import ACTIONS from 'data/ACTIONS'
-import {ActionLink} from 'components/ui/DbLink'
 import {Trans} from '@lingui/react'
 import {Meta} from 'parser/core/Meta'
 
@@ -17,14 +15,14 @@ export default new Meta({
 		<Message warning icon>
 			<Icon name="warning sign"/>
 			<Message.Content>
-				<Trans id="rdm.about.description.warning">Openers, advanced <ActionLink {...ACTIONS.CORPS_A_CORPS}/>, <ActionLink {...ACTIONS.DISPLACEMENT}/>, and <ActionLink {...ACTIONS.MANAFICATION}/> rules are currently not supported at this time.</Trans>
+				<Trans id="rdm.about.description.warning">Openers are currently not supported at this time.</Trans>
 			</Message.Content>
 		</Message>
-</>,
-	// supportedPatches: {
-	// 	from: '4.2',
-	// 	to: '4.5',
-	// },
+	</>,
+	supportedPatches: {
+		from: '5.1',
+		to: '5.2',
+	},
 	contributors: [
 		{user: CONTRIBUTORS.LEYLIA, role: ROLES.MAINTAINER},
 		{user: CONTRIBUTORS.JUMP, role: ROLES.THEORYCRAFT},
@@ -32,5 +30,55 @@ export default new Meta({
 	],
 
 	changelog: [
+		{
+			date: new Date('2020-05-05'),
+			Changes: () => <>Adjusted Combo Severity when you aren't 80|80 going in to always be major.  Fixed a typo; added the Tincture module.</>,
+			contributors: [CONTRIBUTORS.LEYLIA],
+		},
+		{
+			date: new Date('2020-02-27'),
+			Changes: () => <>Added Verstone and Verfire procs to the Timeline</>,
+			contributors: [CONTRIBUTORS.LEYLIA],
+		},
+		{
+			date: new Date('2020-02-26'),
+			Changes: () => <>Bump up supported version to 5.2</>,
+			contributors: [CONTRIBUTORS.LEYLIA],
+		},
+		{
+			date: new Date('2020-01-02'),
+			Changes: () => <>Adjusted Cooldown Downtime handling based on 3-8 Standard opener</>,
+			contributors: [CONTRIBUTORS.LEYLIA],
+		},
+		{
+			date: new Date('2019-11-03'),
+			Changes: () => <>Added basic support for 5.1.  Resolved issue with manafication overcap statistic</>,
+			contributors: [CONTRIBUTORS.LEYLIA],
+		},
+		{
+			date: new Date('2019-08-12'),
+			Changes: () => <>Added handling for Displacement/engagement and Corps-a-corps related to manafication.  Removed manafication from overcap suggestion, added it as 2 small statistics.</>,
+			contributors: [CONTRIBUTORS.LEYLIA],
+		},
+		{
+			date: new Date('2019-08-05'),
+			Changes: () => <>Removed Lucid Dream from oGCD checklist, Displacement now takes Engagement into consideration in the oGCD checklist</>,
+			contributors: [CONTRIBUTORS.LEYLIA],
+		},
+		{
+			date: new Date('2019-07-30'),
+			Changes: () => <>Reprise Cost updated, resolved negative mana issue in Gauge tracking</>,
+			contributors: [CONTRIBUTORS.LEYLIA],
+		},
+		{
+			date: new Date('2019-07-26'),
+			Changes: () => <>Fix an issue with Moulinet Mana costs</>,
+			contributors: [CONTRIBUTORS.LEYLIA],
+		},
+		{
+			date: new Date('2019-07-14'),
+			Changes: () => <>Initial update of existing logic for 5.0 (no new stuff)</>,
+			contributors: [CONTRIBUTORS.LEYLIA],
+		},
 	],
 })

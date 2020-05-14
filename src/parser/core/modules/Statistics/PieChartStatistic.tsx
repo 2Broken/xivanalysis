@@ -13,12 +13,12 @@ const DEFAULT_CHART_OPTIONS = {
 }
 const MISSING_COLOUR_FALLBACK = '#888'
 
-interface FixedLengthArray<T extends any, L extends number> extends Array<T> {
+interface FixedLengthArray<T extends any, L extends number> extends ReadonlyArray<T> {
 	0: T
 	length: L
 }
 
-type DataSet<T> = Array<DataPoint<T>>
+type DataSet<T> = ReadonlyArray<DataPoint<T>>
 
 interface DataPoint<T> {
 	value: number
@@ -79,8 +79,8 @@ export class PieChartStatistic<L extends number> extends AbstractStatistic {
 				</tr>
 			</thead>
 			<tbody>
-				{this.data.map(point => (
-					<tr>
+				{this.data.map((point, index) => (
+					<tr key={index}>
 						<td>
 							<span
 								className={styles.swatch}

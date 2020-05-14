@@ -1,8 +1,7 @@
-import STATUSES from 'data/STATUSES'
 import Module from 'parser/core/Module'
 import {
 	PARTYWIDE_SPEED_BUFF_FLAGS,
-	JOB_SPEED_BUFF_TO_SPEEDMOD_MAP,
+	getJobSpeedBuffToSpeedmodMap,
 	PARTYWIDE_SPEED_BUFF_TO_FLAG_MAP,
 } from './SpeedmodConsts'
 
@@ -10,29 +9,31 @@ export default class Speedmod extends Module {
 	static handle = 'speedmod'
 	static dependencies = [
 		// We rely on these modules for normaliser logic
-		'arcanum', // eslint-disable-line @xivanalysis/no-unused-dependencies
 		'precastStatus', // eslint-disable-line @xivanalysis/no-unused-dependencies
+		'data',
 	]
 
 	// List of statuses we natively handle (See SpeedmodConsts)
-	SPEED_BUFF_STATUS_IDS = [
-		STATUSES.THE_ARROW.id,
-		STATUSES.FEY_WIND.id,
-	]
+	SPEED_BUFF_STATUS_IDS = []
 
 	// Track history of speedmods
-	_history = [{speedmod: 1, start: 0, end: Infinity}]
+	_history = [{speedmod: 1, start: -Infinity, end: Infinity}]
+
+	_jobSpeedBuffToSpeedmodMap = getJobSpeedBuffToSpeedmodMap(this.data)
 
 	_activePartywideSpeedBuffFlags = 0
-	_activeSpeedMap = JOB_SPEED_BUFF_TO_SPEEDMOD_MAP[0]
+	_activeSpeedMap = this._jobSpeedBuffToSpeedmodMap[0]
 
 	// Override to handle extra logic during normalise, or to fill in _activeSpeedMap manually if not generating gauge-based buff events
-	jobSpecificNormaliseLogic(/* event */) {
+	// TODO: disabled due to TS typing
+	// eslint-disable-next-line no-unused-vars
+	jobSpecificNormaliseLogic(event) {
 	}
 
 	// Override for scalars that function outside of speedmod
-	// NOTE: Only Riddle of Fire (MNK) and 3-stack Astral Fire/Umbral Ice (BLM) actually do this. Please use _activeSpeedMap for everything else
-	getJobAdditionalSpeedbuffScalar() {
+	// NOTE: Only Greased Lightning (MNK) and 3-stack Astral Fire/Umbral Ice (BLM) actually do this. Please use _activeSpeedMap for everything else
+	// eslint-disable-next-line no-unused-vars
+	getJobAdditionalSpeedbuffScalar(event) {
 		return 1.0
 	}
 
@@ -65,29 +66,21 @@ export default class Speedmod extends Module {
 				!this.parser.toPlayer(event)
 			) { continue }
 
-			const jobSpeedMap = JOB_SPEED_BUFF_TO_SPEEDMOD_MAP[event.ability.guid]
+			const jobSpeedMap = this._jobSpeedBuffToSpeedmodMap[event.ability.guid]
 			if (jobSpeedMap != null) {
 				if (event.type === 'applybuff') {
 					this._activeSpeedMap = jobSpeedMap
 				} else if (event.type === 'removebuff') {
-					this._activeSpeedMap = JOB_SPEED_BUFF_TO_SPEEDMOD_MAP[0]
+					this._activeSpeedMap = this._jobSpeedBuffToSpeedmodMap[0]
 				}
 			}
 
 			const partywideSpeedBuffFlag = PARTYWIDE_SPEED_BUFF_TO_FLAG_MAP[event.ability.guid]
 			if (partywideSpeedBuffFlag != null) {
 				if (event.type === 'applybuff') {
-					if (event.ability.guid === STATUSES.THE_ARROW.id) {
-						this._activePartywideSpeedBuffFlags |= partywideSpeedBuffFlag[event.strengthModifier]
-					} else {
-						this._activePartywideSpeedBuffFlags |= partywideSpeedBuffFlag
-					}
+					this._activePartywideSpeedBuffFlags |= partywideSpeedBuffFlag
 				} else if (event.type === 'removebuff') {
-					if (event.ability.guid === STATUSES.THE_ARROW.id) {
-						this._activePartywideSpeedBuffFlags &= ~PARTYWIDE_SPEED_BUFF_FLAGS.ARROW_ALL
-					} else {
-						this._activePartywideSpeedBuffFlags &= ~partywideSpeedBuffFlag
-					}
+					this._activePartywideSpeedBuffFlags &= ~partywideSpeedBuffFlag
 				}
 			}
 

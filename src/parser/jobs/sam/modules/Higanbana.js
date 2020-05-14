@@ -23,6 +23,7 @@ export default class Higanbana extends Module {
 	static dependencies = [
 		'checklist',
 		'enemies',
+		'entityStatuses',
 		'invuln',
 		'suggestions',
 	]
@@ -40,8 +41,8 @@ export default class Higanbana extends Module {
 
 			abilityId: [STATUSES.HIGANBANA.id],
 		}
-		this.addHook(['applydebuff', 'refreshdebuff'], filter, this._onDotApply)
-		this.addHook('complete', this._onComplete)
+		this.addEventHook(['applydebuff', 'refreshdebuff'], filter, this._onDotApply)
+		this.addEventHook('complete', this._onComplete)
 	}
 
 	_onDotApply(event) {
@@ -104,7 +105,7 @@ export default class Higanbana extends Module {
 		}))
 	}
 	getDotUptimePercent(statusId) {
-		const statusUptime = this.enemies.getStatusUptime(statusId)
+		const statusUptime = this.entityStatuses.getStatusUptime(statusId, this.enemies.getEntities())
 		const fightDuration = this.parser.fightDuration - this.invuln.getInvulnerableUptime()
 
 		return (statusUptime / fightDuration) * 100

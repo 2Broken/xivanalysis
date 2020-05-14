@@ -1,5 +1,6 @@
 import Weaving from 'parser/core/modules/Weaving'
 import ACTIONS from 'data/ACTIONS'
+import STATUSES from 'data/STATUSES'
 import {BLM_GAUGE_EVENT} from './Gauge'
 import DISPLAY_ORDER from './DISPLAY_ORDER'
 
@@ -7,8 +8,6 @@ const OGCD_EXCEPTIONS = [
 	ACTIONS.LUCID_DREAMING.id,
 	ACTIONS.ADDLE.id,
 	ACTIONS.SURECAST.id,
-	ACTIONS.APOCATASTASIS.id,
-	ACTIONS.MANA_SHIFT.id,
 	ACTIONS.TRANSPOSE.id,
 ]
 
@@ -25,6 +24,7 @@ export default class BlmWeaving extends Weaving {
 		...Weaving.dependencies,
 		'invuln',
 		'gauge', // eslint-disable-line @xivanalysis/no-unused-dependencies
+		'castTime',
 	]
 
 	_astralFireStacks = 0
@@ -33,11 +33,15 @@ export default class BlmWeaving extends Weaving {
 	_lastF3FastCast = false
 	_lastB3FastCast = false
 
+	_ctIndex = null
+
 	constructor(...args) {
 		super(...args)
-		this.addHook(BLM_GAUGE_EVENT, this._onGaugeChange)
-		this.addHook('begincast', {by: 'player', abilityId: ACTIONS.FIRE_III.id}, this._beginFire3)
-		this.addHook('begincast', {by: 'player', abilityId: ACTIONS.BLIZZARD_III.id}, this._beginBlizzard3)
+		this.addEventHook(BLM_GAUGE_EVENT, this._onGaugeChange)
+		this.addEventHook('begincast', {by: 'player', abilityId: ACTIONS.FIRE_III.id}, this._beginFire3)
+		this.addEventHook('begincast', {by: 'player', abilityId: ACTIONS.BLIZZARD_III.id}, this._beginBlizzard3)
+		this.addEventHook('applybuff', {by: 'player', abilityId: STATUSES.TRIPLECAST.id}, this._onApplyTriple)
+		this.addEventHook('removebuff', {by: 'player', abilityId: STATUSES.TRIPLECAST.id}, this._onRemoveTriple)
 	}
 
 	_beginFire3() {
@@ -52,11 +56,19 @@ export default class BlmWeaving extends Weaving {
 		this._umbralIceStacks = event.umbralIce
 	}
 
+	_onApplyTriple() {
+		this._ctIndex = this.castTime.set('all', 0)
+	}
+
+	_onRemoveTriple() {
+		this.castTime.reset(this._ctIndex)
+	}
+
 	//check for fast casted F3/B3 and allow 1 weave if you get one
 	isBadWeave(weave, maxWeaves) {
 		if (weave.leadingGcdEvent.ability) {
 			const weaveCount = weave.weaves.filter(
-				event => !this.invuln.isUntargetable('all', event.timestamp)
+				event => !this.invuln.isUntargetable('all', event.timestamp),
 			).length
 
 			//allow a single weave of the OGCD exceptions

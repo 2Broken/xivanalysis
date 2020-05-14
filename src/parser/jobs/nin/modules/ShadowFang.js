@@ -24,7 +24,7 @@ export default class ShadowFang extends DoTs {
 		this.checklist.add(new Rule({
 			name: <Trans id="nin.shadowfang.checklist.name">Keep Shadow Fang up</Trans>,
 			description: <Trans id="nin.shadowfang.checklist.description">
-				<ActionLink {...ACTIONS.SHADOW_FANG}/> is your strongest combo finisher (assuming at least 4 DoT ticks hit). In addition, it provides a slashing debuff which you, WARs, and SAMs are responsible for maintaining and should ideally never let lapse.
+				<ActionLink {...ACTIONS.SHADOW_FANG}/> is your strongest combo finisher (assuming at least 5 DoT ticks hit) and should be maintained at all times.
 			</Trans>,
 			displayOrder: DISPLAY_ORDER.SHADOW_FANG,
 			requirements: [
@@ -49,7 +49,7 @@ export default class ShadowFang extends DoTs {
 			},
 			value: this.getClippingAmount(STATUSES.SHADOW_FANG.id),
 			why: <Trans id="nin.shadowfang.suggestions.clipping.why">
-				You lost {this.parser.formatDuration(clip[STATUSES.SHADOW_FANG.id])} of Shadow Fang to early refreshes.
+				You lost {this.parser.formatDuration(clip[STATUSES.SHADOW_FANG.id] ?? 0)} of Shadow Fang to early refreshes.
 			</Trans>,
 		}))
 	}

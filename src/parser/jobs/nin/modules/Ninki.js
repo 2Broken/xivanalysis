@@ -13,24 +13,47 @@ import TimeLineChart from 'components/ui/TimeLineChart'
 // Constants
 const MAX_NINKI = 100
 
-const NINKI_BUILDERS = {
+const GCD_NINKI_GAIN = {
+	[ACTIONS.SPINNING_EDGE.id]: 5,
+	[ACTIONS.GUST_SLASH.id]: 5,
+	[ACTIONS.DEATH_BLOSSOM.id]: 5,
+	[ACTIONS.HAKKE_MUJINSATSU.id]: 5,
+	[ACTIONS.THROWING_DAGGER.id]: 5,
+	[ACTIONS.AEOLIAN_EDGE.id]: 10,
+	[ACTIONS.ARMOR_CRUSH.id]: 10,
+	[ACTIONS.SHADOW_FANG.id]: 10,
+}
+const OGCD_NINKI_GAIN = {
 	[ACTIONS.MUG.id]: 40,
-	[ACTIONS.MEISUI.id]: 40,
-	[ACTIONS.SPINNING_EDGE.id]: 8,
-	[ACTIONS.GUST_SLASH.id]: 8,
-	[ACTIONS.AEOLIAN_EDGE.id]: 8,
-	[ACTIONS.SHADOW_FANG.id]: 8,
-	[ACTIONS.ARMOR_CRUSH.id]: 8,
-	[ACTIONS.DEATH_BLOSSOM.id]: 8, // TODO - Confirm whether AoE weaponskills count
-	[ACTIONS.HAKKE_MUJINSATSU.id]: 8,
-	[ACTIONS.THROWING_DAGGER.id]: 8,
+	[ACTIONS.MEISUI.id]: 50,
 }
+const BUNSHIN_NINKI_GAIN = 5
+const SPENDER_COST = 50
 
-const NINKI_SPENDERS = {
-	[ACTIONS.HELLFROG_MEDIUM.id]: 80,
-	[ACTIONS.BHAVACAKRA.id]: 80,
-	[ACTIONS.BUNSHIN.id]: 80,
-}
+const NINKI_GCDS = [
+	ACTIONS.SPINNING_EDGE.id,
+	ACTIONS.DEATH_BLOSSOM.id,
+	ACTIONS.THROWING_DAGGER.id,
+	ACTIONS.SHADOW_FANG.id,
+]
+
+const NINKI_COMBOS = [
+	ACTIONS.GUST_SLASH.id,
+	ACTIONS.AEOLIAN_EDGE.id,
+	ACTIONS.ARMOR_CRUSH.id,
+	ACTIONS.HAKKE_MUJINSATSU.id,
+]
+
+const NINKI_OGCDS = [
+	ACTIONS.MUG.id,
+	ACTIONS.MEISUI.id,
+]
+
+const NINKI_SPENDERS = [
+	ACTIONS.HELLFROG_MEDIUM.id,
+	ACTIONS.BHAVACAKRA.id,
+	ACTIONS.BUNSHIN.id,
+]
 
 export default class Ninki extends Module {
 	static handle = 'ninki'
@@ -50,7 +73,7 @@ export default class Ninki extends Module {
 		[ACTIONS.AEOLIAN_EDGE.id]: 0,
 		[ACTIONS.SHADOW_FANG.id]: 0,
 		[ACTIONS.ARMOR_CRUSH.id]: 0,
-		[ACTIONS.DEATH_BLOSSOM.id]: 0, // TODO - Confirm whether AoE weaponskills count
+		[ACTIONS.DEATH_BLOSSOM.id]: 0,
 		[ACTIONS.HAKKE_MUJINSATSU.id]: 0,
 		[ACTIONS.THROWING_DAGGER.id]: 0,
 	}
@@ -58,17 +81,21 @@ export default class Ninki extends Module {
 
 	constructor(...args) {
 		super(...args)
-		this.addHook('cast', {by: 'player', abilityId: Object.keys(NINKI_BUILDERS).map(Number)}, this._onBuilderCast)
-		this.addHook('cast', {by: 'player', abilityId: Object.keys(NINKI_SPENDERS).map(Number)}, this._onSpenderCast)
-		this.addHook('aoedamage', {by: 'player', abilityId: ACTIONS.HELLFROG_MEDIUM.id}, this._onHellfrogAoe)
-		this.addHook('death', {to: 'player'}, this._onDeath)
-		this.addHook('complete', this._onComplete)
+		this.addEventHook('cast', {by: 'player', abilityId: NINKI_GCDS}, event => this._addNinki(event, GCD_NINKI_GAIN[event.ability.guid]))
+		this.addEventHook('combo', {by: 'player', abilityId: NINKI_COMBOS}, event => this._addNinki(event, GCD_NINKI_GAIN[event.ability.guid]))
+		this.addEventHook('cast', {by: 'player', abilityId: NINKI_OGCDS}, event => this._addNinki(event, OGCD_NINKI_GAIN[event.ability.guid]))
+		this.addEventHook('cast', {by: 'pet'}, event => this._addNinki(event, BUNSHIN_NINKI_GAIN))
+		this.addEventHook('cast', {by: 'player', abilityId: NINKI_SPENDERS}, this._onSpenderCast)
+		this.addEventHook('normaliseddamage', {by: 'player', abilityId: ACTIONS.HELLFROG_MEDIUM.id}, this._onHellfrogAoe)
+		this.addEventHook('death', {to: 'player'}, this._onDeath)
+		this.addEventHook('complete', this._onComplete)
+
 	}
 
-	_onBuilderCast(event) {
+	_addNinki(event, amount) {
 		const abilityId = event.ability.guid
 
-		this._ninki += NINKI_BUILDERS[abilityId]
+		this._ninki += amount
 		if (this._ninki > MAX_NINKI) {
 			const waste = this._ninki - MAX_NINKI
 			this._wasteBySource[abilityId] += waste
@@ -78,13 +105,13 @@ export default class Ninki extends Module {
 		this._pushToHistory()
 	}
 
-	_onSpenderCast(event) {
-		this._ninki = Math.max(this._ninki - NINKI_SPENDERS[event.ability.guid], 0)
+	_onSpenderCast() {
+		this._ninki = Math.max(this._ninki - SPENDER_COST, 0)
 		this._pushToHistory()
 	}
 
 	_onHellfrogAoe(event) {
-		if (event.hits.length === 1) {
+		if (event.hitCount === 1) {
 			// If we have a Hellfrog AoE event with only one target, it should've been a Bhava instead
 			this._erroneousFrogs++
 		}
@@ -106,11 +133,11 @@ export default class Ninki extends Module {
 		this.suggestions.add(new TieredSuggestion({
 			icon: 'https://xivapi.com/i/005000/005411.png',
 			content: <Trans id="nin.ninki.suggestions.waste.content">
-				Avoid using <ActionLink {...ACTIONS.MUG}/> and <ActionLink {...ACTIONS.MEISUI}/> when above 50 Ninki and holding your Ninki spenders when near or at cap (with a few small exceptions) in order to maximize the number of spenders you can use over the course of a fight.
+				Avoid using <ActionLink {...ACTIONS.MUG}/> and <ActionLink {...ACTIONS.MEISUI}/> when above 40 Ninki and holding your Ninki spenders when near or at cap (with a few small exceptions) in order to maximize the number of spenders you can use over the course of a fight.
 			</Trans>,
 			tiers: {
-				30: SEVERITY.MINOR,
-				80: SEVERITY.MAJOR,
+				20: SEVERITY.MINOR,
+				50: SEVERITY.MAJOR,
 			},
 			value: totalWaste,
 			why: <Trans id="nin.ninki.suggestions.waste.why">
@@ -142,8 +169,8 @@ export default class Ninki extends Module {
 					label: 'Ninki',
 					steppedLine: true,
 					data: this._ninkiHistory,
-					backgroundColor: ninkiColor.fade(0.8),
-					borderColor: ninkiColor.fade(0.5),
+					backgroundColor: ninkiColor.fade(0.8).toString(),
+					borderColor: ninkiColor.fade(0.5).toString(),
 				},
 			],
 		}

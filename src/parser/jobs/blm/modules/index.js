@@ -1,5 +1,4 @@
 import Gauge from './Gauge'
-import Triple from './Triple'
 import Procs from './Procs'
 import BlmWeaving from './Weaving'
 import RotationWatchdog from './RotationWatchdog'
@@ -7,10 +6,11 @@ import OGCDDowntime from './OGCDDowntime'
 import Speedmod from './Speedmod'
 import Leylines from './Leylines'
 import NotCasting from './NotCasting'
+import Sharpcast from './Sharpcast'
+import Thunder from './Thunder'
 
 export default [
 	Gauge,
-	Triple,
 	Procs,
 	BlmWeaving,
 	RotationWatchdog,
@@ -18,4 +18,6 @@ export default [
 	Speedmod,
 	Leylines,
 	NotCasting,
+	Sharpcast,
+	Thunder,
 ]

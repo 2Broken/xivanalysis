@@ -24,22 +24,61 @@ export default new Meta({
 				<Trans id="sch.about.description.warning.development">While the analysis below should be reasonably accurate, this system <em>is</em> still in development, and may get a little mixed up sometimes. If you notice any issues, or have any concerns, please drop by our Discord channel!</Trans>
 			</Message.Content>
 		</Message>
-
-		<Message warning icon>
-			<Icon name="warning sign"/>
-			<Message.Content>
-				<Trans id="sch.about.description.warning.healer">Currently, for all healers, boss invulnerability checking doesn't function properly. This results in inaccuracy for many time-related functions such as the Always be casting checklist item or DoT uptime.</Trans>
-			</Message.Content>
-		</Message>
 	</>,
-	// supportedPatches: {
-	// 	from: '4.3',
-	// 	to: '4.5',
-	// },
+	supportedPatches: {
+		from: '5.0',
+		to: '5.2',
+	},
 	contributors: [
+		{user: CONTRIBUTORS.YUNI, role: ROLES.THEORYCRAFT},
 		{user: CONTRIBUTORS.LIMA, role: ROLES.MAINTAINER},
+		{user: CONTRIBUTORS.NONO, role: ROLES.DEVELOPER},
 		{user: CONTRIBUTORS.SUSHIROU, role: ROLES.DEVELOPER},
+		{user: CONTRIBUTORS.NIV, role: ROLES.DEVELOPER},
 	],
-	changelog: [
-	],
+	changelog: [{
+		date: new Date('2020-04-07'),
+		Changes: () => <>Add Faerie actions to timeline</>,
+		contributors: [CONTRIBUTORS.NONO],
+	},
+	{
+		date: new Date('2020-02-18'),
+		Changes: () => <>Support for 5.2; happy raiding SCHs!</>,
+		contributors: [CONTRIBUTORS.NONO],
+	},
+	{
+		date: new Date('2019-10-29'),
+		Changes: () => <>Support for 5.1; additionally, only warn on faerie gauge overcap starting at 50</>,
+		contributors: [CONTRIBUTORS.NONO],
+	},
+	{
+		date: new Date('2019-09-19'),
+		Changes: () => <>Track interrupts; a big thanks to Tonto Draksbane and Yuni in the balance for help with this feature</>,
+		contributors: [CONTRIBUTORS.NONO],
+	},
+	{
+		date: new Date('2019-08-09'),
+		Changes: () => <>
+			Initial support for Shadowbringers:&nbsp;
+			<ul>
+				<li>Add gauge tracking</li>
+				<li>Track Chain Strategem use</li>
+				<li>Fix issue with Recitation creating negative Aetherflow counts</li>
+				<li>Add Energy Drain back as a valid Aetherflow consumer</li>
+			</ul>
+		</>,
+		contributors: [CONTRIBUTORS.NONO],
+	},
+	{
+		date: new Date('2019-07-12'),
+		Changes: () => <>
+			Initial changes for Shadowbringers:&nbsp;
+			<ul>
+				<li>Updated 5.0 action list</li>
+				<li>Updated DoT module to check Biolysis</li>
+				<li>Removed outdated modules and actions</li>
+			</ul>
+		</>,
+		contributors: [CONTRIBUTORS.NIV],
+	}],
 })

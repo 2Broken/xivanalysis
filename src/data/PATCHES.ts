@@ -1,4 +1,4 @@
-import {ReportLanguage} from 'fflogs'
+import {ProcessedReportFightsResponse, ReportLanguage} from 'fflogs'
 import _ from 'lodash'
 
 export enum GameEdition {
@@ -20,6 +20,12 @@ export function languageToEdition(lang: ReportLanguage): GameEdition {
 
 		case ReportLanguage.CHINESE:
 			return GameEdition.CHINESE
+
+		// Fallback case for when fflogs borks
+		// TODO: This probably will crop up in other places. Look into solving it higher up the chain.
+		case ReportLanguage.UNKNOWN:
+		case undefined:
+			return GameEdition.GLOBAL
 	}
 
 	throw new Error(`Unknown report language "${lang}" received.`)
@@ -63,6 +69,34 @@ const PATCHES = {
 	'5.0': {
 		date: {
 			[GameEdition.GLOBAL]: 1561712400, // 28/06/19 09:00:00 GMT
+			[GameEdition.CHINESE]: 1571126400, // 15/10/19 08:00:00 GMT
+		},
+	},
+	'5.01': {
+		date: {
+			[GameEdition.GLOBAL]: 1563267600, // 16/07/19 09:00:00 GMT
+		},
+	},
+	'5.05': {
+		date: {
+			[GameEdition.GLOBAL]: 1564477200, // 30/07/19 09:00:00 GMT
+		},
+	},
+	'5.08': {
+		date: {
+			[GameEdition.GLOBAL]: 1567069200, // 29/08/19 09:00:00 GMT
+			[GameEdition.KOREAN]: 1575360000, // 03/12/19 08:00:00 GMT
+		},
+	},
+	'5.1': {
+		date: {
+			[GameEdition.GLOBAL]: 1572339600, // 29/10/19 09:00:00 GMT
+			[GameEdition.KOREAN]: 1585036800, // 24/03/20 08:00:00 GMT
+		},
+	},
+	'5.2': {
+		date: {
+			[GameEdition.GLOBAL]: 1582016400, // 08/02/20 09:00:00 GMT
 		},
 	},
 }
@@ -92,6 +126,9 @@ export function getPatchDate(edition: GameEdition, patch: PatchNumber) {
 	}
 	return date || Infinity
 }
+
+export const getReportPatch = (report: ProcessedReportFightsResponse) =>
+	patchData[getPatch(languageToEdition(report.lang), report.start / 1000)]
 
 export function patchSupported(
 	edition: GameEdition,

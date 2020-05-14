@@ -32,14 +32,65 @@ export default new Meta({
 			</Message.Content>
 		</Message>
 	</>,
-	// supportedPatches: {
-	// 	from: '4.2',
-	// 	to: '4.5',
-	// },
+	supportedPatches: {
+		from: '5.0',
+		to: '5.2',
+	},
 	contributors: [
 		{user: CONTRIBUTORS.MIKEMATRIX, role: ROLES.MAINTAINER},
+		{user: CONTRIBUTORS.LHEA, role: ROLES.MAINTAINER},
+		{user: CONTRIBUTORS.QAPHLA, role: ROLES.DEVELOPER},
 	],
 
 	changelog: [
+		{
+			date: new Date('2019-07-18'),
+			Changes: () => <>
+				Basic 5.0 support for Paladin.
+			</>,
+			contributors: [CONTRIBUTORS.LHEA],
+		},
+		{
+			date: new Date('2019-07-23'),
+			Changes: () => <>
+				Fix penalties for double-weaving during an active Requiescat window.
+			</>,
+			contributors: [CONTRIBUTORS.LHEA],
+		},
+		{
+			date: new Date('2019-07-25'),
+			Changes: () => <>
+				Minor fix for weaving case where player leads on oGCDs.
+			</>,
+			contributors: [CONTRIBUTORS.LHEA],
+		},
+		{
+			date: new Date('2019-08-20'),
+			Changes: () => <>
+				Added usage tracking for Fight or Flight and Requiescat.
+			</>,
+			contributors: [CONTRIBUTORS.QAPHLA],
+		},
+		{
+			date: new Date('2019-08-21'),
+			Changes: () => <>
+				Don't penalize for rushed Requiescat windows due to expected downtime or end-of-fight.
+			</>,
+			contributors: [CONTRIBUTORS.LHEA],
+		},
+		{
+			date: new Date('2019-09-01'),
+			Changes: () => <>
+				Don't penalize for rushed Fight or Flight windows due to expected downtime or end-of-fight.
+			</>,
+			contributors: [CONTRIBUTORS.LHEA],
+		},
+		{
+			date: new Date('2020-04-19'),
+			Changes: () => <>
+				Adjust recommendations for Requiescat and Fight or Flight window lengths.
+			</>,
+			contributors: [CONTRIBUTORS.QAPHLA],
+		},
 	],
 })

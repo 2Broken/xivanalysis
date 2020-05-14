@@ -1,6 +1,6 @@
 import {Trans} from '@lingui/react'
 import Rotation from 'components/ui/Rotation'
-import {CastEvent} from 'fflogs'
+import {Ability} from 'fflogs'
 import React from 'react'
 import {Button, Table} from 'semantic-ui-react'
 import {formatDuration} from 'utilities'
@@ -33,7 +33,7 @@ export interface RotationTargetData {
 	/**
 	 * Expected target number
 	 */
-	expected: number
+	expected?: number
 	/**
 	 * Recorded number
 	 */
@@ -74,7 +74,7 @@ export interface RotationTableEntry {
 	/**
 	 * Rotation to display that occurs during this entry
 	 */
-	rotation: CastEvent[]
+	rotation: Array<{ability: Ability}>
 }
 
 interface RotationTableProps {
@@ -98,6 +98,11 @@ interface RotationTableProps {
 	 * @param scrollTo
 	 */
 	onGoto?: (start: number, end: number, scrollTo?: boolean) => void
+	/**
+	 * Optional property to provide a JSX.Element (translation tag) for the header value.
+	 * Defaults to "Rotation"
+	 */
+	headerTitle?: JSX.Element
 }
 
 interface RotationTableRowProps {
@@ -146,16 +151,16 @@ export class RotationTable extends React.Component<RotationTableProps> {
 	static TargetCell = ({actual, expected}: RotationTargetData) =>
 		<Table.Cell
 			textAlign="center"
-			positive={actual >= expected}
-			negative={actual < expected}
+			positive={expected === undefined ? false : actual >= expected}
+			negative={expected === undefined ? false : actual < expected}
 		>
-			{actual}/{expected}
+			{actual}/{expected === undefined ? '-' : expected}
 		</Table.Cell>
 
 	static Row = ({onGoto, targets, notes, notesMap, start, end, targetsData, rotation}: RotationTableRowProps & RotationTableEntry) =>
 		<Table.Row>
 			<Table.Cell textAlign="center">
-				<span style={{marginRight: 5}}>{formatDuration(start / 1000)}</span>
+				<span style={{marginRight: 5}}>{formatDuration(start, {secondPrecision: 0})}</span>
 				{typeof onGoto === 'function' && <Button
 					circular
 					compact
@@ -192,6 +197,7 @@ export class RotationTable extends React.Component<RotationTableProps> {
 			notes,
 			data,
 			onGoto,
+			headerTitle,
 		} = this.props
 
 		return <Table compact unstackable celled>
@@ -208,7 +214,7 @@ export class RotationTable extends React.Component<RotationTableProps> {
 						)
 					}
 					<Table.HeaderCell>
-						<strong><Trans id="core.ui.rotation-table.header.rotation">Rotation</Trans></strong>
+						<strong>{(headerTitle)? headerTitle : <Trans id="core.ui.rotation-table.header.rotation">Rotation</Trans>}</strong>
 					</Table.HeaderCell>
 					{
 						(notes || []).map((note, i) =>

@@ -9,13 +9,14 @@ import {Rule, Requirement} from 'parser/core/modules/Checklist'
 import {Suggestion, SEVERITY} from 'parser/core/modules/Suggestions'
 
 const STORMS_EYE_DURATION = 30000
-const STORMS_EYE_BUFFER = 10000
+const STORMS_EYE_BUFFER = 7000
 
 export default class StormsEye extends Module {
 	static handle = 'stormseye'
 	static dependencies = [
 		'checklist',
 		'combatants',
+		'entityStatuses',
 		'invuln',
 		'suggestions',
 	]
@@ -30,9 +31,9 @@ export default class StormsEye extends Module {
 			by: 'player',
 			abilityId: STATUSES.STORMS_EYE.id,
 		}
-		this.addHook('applybuff', filter, this._onStormsEyeApplication)
-		this.addHook('refreshbuff', filter, this._onStormsEyeApplication)
-		this.addHook('complete', this._onComplete)
+		this.addEventHook('applybuff', filter, this._onStormsEyeApplication)
+		this.addEventHook('refreshbuff', filter, this._onStormsEyeApplication)
+		this.addEventHook('complete', this._onComplete)
 	}
 
 	_onStormsEyeApplication(event) {
@@ -80,7 +81,7 @@ export default class StormsEye extends Module {
 
 	//
 	getUptimePercent() {
-		const statusUptime = this.combatants.getStatusUptime(STATUSES.STORMS_EYE.id, this.parser.player.id)
+		const statusUptime = this.entityStatuses.getStatusUptime(STATUSES.STORMS_EYE.id, this.combatants.getEntities())
 		const fightUptime = this.parser.fightDuration - this.invuln.getInvulnerableUptime()
 
 		return (statusUptime / fightUptime) * 100

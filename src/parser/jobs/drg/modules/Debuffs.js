@@ -27,6 +27,7 @@ export default class Debuffs extends DoTs {
 				<ActionLink {...ACTIONS.CHAOS_THRUST}/> provides a potent DoT which should be maintained at all times.
 			</Trans>,
 			displayOrder: DISPLAY_ORDER.DEBUFFS,
+			target: 90,
 			requirements: [
 				new Requirement({
 					name: <Trans id="drg.debuffs.checklist.requirement.chaos-thrust.name"><ActionLink {...ACTIONS.CHAOS_THRUST}/> uptime</Trans>,
@@ -37,11 +38,10 @@ export default class Debuffs extends DoTs {
 	}
 
 	addClippingSuggestions(clip) {
-		// TODO - This text will probably need to be updated with the removal of HT
 		this.suggestions.add(new TieredSuggestion({
 			icon: ACTIONS.CHAOS_THRUST.icon,
 			content: <Trans id="drg.debuffs.suggestions.clipping.content">
-				Avoid refreshing <ActionLink {...ACTIONS.CHAOS_THRUST}/> significantly before its expiration, as it usually indicates rotational errors. DRG's strict 11-GCD rotation should have you refreshing Chaos Thrust with 1-2 seconds remaining, depending on your skill speed.
+				Avoid refreshing <ActionLink {...ACTIONS.CHAOS_THRUST}/> significantly before its expiration, as it usually indicates rotational errors. DRG's strict 10-GCD rotation should have you refreshing Chaos Thrust with 1-2 seconds remaining, depending on your skill speed.
 			</Trans>,
 			tiers: {
 				5: SEVERITY.MINOR,
@@ -50,7 +50,7 @@ export default class Debuffs extends DoTs {
 			},
 			value: this.getClippingAmount(STATUSES.CHAOS_THRUST.id),
 			why: <Trans id="drg.debuffs.suggestions.clipping.why">
-				You lost {this.parser.formatDuration(clip[STATUSES.CHAOS_THRUST.id])} of Chaos Thrust to early refreshes.
+				You lost {this.parser.formatDuration(clip[STATUSES.CHAOS_THRUST.id] ?? 0)} of Chaos Thrust to early refreshes.
 			</Trans>,
 		}))
 	}

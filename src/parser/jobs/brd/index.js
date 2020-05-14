@@ -5,6 +5,7 @@ import {ActionLink} from 'components/ui/DbLink'
 import CONTRIBUTORS, {ROLES} from 'data/CONTRIBUTORS'
 import ACTIONS from 'data/ACTIONS'
 import {Meta} from 'parser/core/Meta'
+import {changelog} from './changelog'
 
 export default new Meta({
 	modules: () => import('./modules' /* webpackChunkName: "jobs-brd" */),
@@ -22,11 +23,13 @@ export default new Meta({
 			</Message.Content>
 		</Message>
 	</>,
-	//supportedPatches: {
-	//	from: '5.0',
-	//	to: '5.0',
-	//},
+	supportedPatches: {
+		from: '5.0',
+		to: '5.2',
+	},
 	contributors: [
 		{user: CONTRIBUTORS.YUMIYA, role: ROLES.DEVELOPER},
+		{user: CONTRIBUTORS.RIRIAN, role: ROLES.DEVELOPER},
 	],
+	changelog,
 })

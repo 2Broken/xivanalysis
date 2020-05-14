@@ -33,10 +33,10 @@ export default class Wildfire extends Module {
 
 	constructor(...args) {
 		super(...args)
-		this.addHook('damage', {by: 'player'}, this._onDamage)
-		this.addHook('damage', {by: 'player', abilityId: STATUSES.WILDFIRE.id}, this._onWildfireDamage)
-		this.addHook('applydebuff', {by: 'player', abilityId: STATUSES.WILDFIRE.id}, this._onWildfireApplied)
-		this.addHook('complete', this._onComplete)
+		this.addEventHook('damage', {by: 'player'}, this._onDamage)
+		this.addEventHook('damage', {by: 'player', abilityId: STATUSES.WILDFIRE.id}, this._onWildfireDamage)
+		this.addEventHook('applydebuff', {by: 'player', abilityId: STATUSES.WILDFIRE.id}, this._onWildfireApplied)
+		this.addEventHook('complete', this._onComplete)
 	}
 
 	_onDamage(event) {
@@ -79,15 +79,15 @@ export default class Wildfire extends Module {
 	}
 
 	_onWildfireApplied(event) {
-		if (this._wildfireWindows.current === null) {
-			this._wildfireWindows.current = {
-				start: event.timestamp,
-				casts: [],
-				targetId: event.targetID,
-			}
-		} else if (this._wildfireWindows.current.start + DEBUFF_APPLICATION_BUFFER < event.timestamp) {
+		if (this._wildfireWindows.current && this._wildfireWindows.current.start + DEBUFF_APPLICATION_BUFFER < event.timestamp) {
 			// We have an unfinished WF window; the lack of a damage event to close it implies that it fizzled due to downtime, so track that
 			this._closeWildfireWindow(0)
+		}
+
+		this._wildfireWindows.current = {
+			start: event.timestamp,
+			casts: [],
+			targetId: event.targetID,
 		}
 	}
 

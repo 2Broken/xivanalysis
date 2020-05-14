@@ -24,7 +24,6 @@ const KENKI_ACTIONS = {
 	[ACTIONS.YUKIKAZE.id]: {combo: 10},
 	[ACTIONS.GEKKO.id]: {combo: 5, positional: 5},
 	[ACTIONS.KASHA.id]: {combo: 5, positional: 5},
-	[ACTIONS.AGEHA.id]: {cast: 10}, // cast 10, kill 20
 
 	// aoe
 	[ACTIONS.FUGA.id]: {cast: 5},
@@ -34,6 +33,9 @@ const KENKI_ACTIONS = {
 	// ranged
 	[ACTIONS.ENPI.id]: {cast: 10},
 
+	// oGCD
+	[ACTIONS.IKISHOTEN.id]: {cast: 50},
+
 	// spenders
 	[ACTIONS.HISSATSU_GYOTEN.id]: {cast: -10},
 	[ACTIONS.HISSATSU_YATEN.id]: {cast: -10},
@@ -41,7 +43,8 @@ const KENKI_ACTIONS = {
 	[ACTIONS.HISSATSU_KAITEN.id]: {cast: -20},
 	[ACTIONS.HISSATSU_SHINTEN.id]: {cast: -25},
 	[ACTIONS.HISSATSU_KYUTEN.id]: {cast: -25},
-	[ACTIONS.HISSATSU_GUREN.id]: {cast: -50},
+	[ACTIONS.HISSATSU_GUREN.id]: {cast: -50}, //AOE
+	[ACTIONS.HISSATSU_SENEI.id]: {cast: -50}, //Single Target
 }
 
 const KENKI_PER_MEDITATE_TICK = 10
@@ -71,11 +74,15 @@ export default class Kenki extends Module {
 		transfer: 0,
 	}
 
+	//Aoe flags
+
+	_badGuren = 0
+
 	constructor(...args) {
 		super(...args)
 
 		// Kenki actions
-		this.addHook(
+		this.addEventHook(
 			['cast', 'combo'],
 			{by: 'player', abilityId: Object.keys(KENKI_ACTIONS).map(Number)},
 			this._onAction,
@@ -83,14 +90,14 @@ export default class Kenki extends Module {
 
 		// Meditate
 		const filter = {by: 'player', abilityId: STATUSES.MEDITATE.id}
-		this.addHook('applybuff', filter, this._onApplyMeditate)
-		this.addHook('removebuff', filter, this._onRemoveMeditate)
+		this.addEventHook('applybuff', filter, this._onApplyMeditate)
+		this.addEventHook('removebuff', filter, this._onRemoveMeditate)
 
 		// Death just flat out resets everything. Stop dying.
-		this.addHook('death', {to: 'player'}, () => this._set(0, 0))
+		this.addEventHook('death', {to: 'player'}, () => this._set(0, 0))
 
 		// Misc
-		this.addHook('complete', this._onComplete)
+		this.addEventHook('complete', this._onComplete)
 	}
 
 	/**
@@ -188,8 +195,8 @@ export default class Kenki extends Module {
 				label: 'Maximum',
 				data: this._history.max,
 				steppedLine: true,
-				backgroundColor: sam.fade(0.5),
-				borderColor: sam.fade(0.2),
+				backgroundColor: sam.fade(0.5).toString(),
+				borderColor: sam.fade(0.2).toString(),
 				fill: '-1',
 				pointRadius: 0,
 				pointHitRadius: 10,

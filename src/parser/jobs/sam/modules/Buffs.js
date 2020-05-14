@@ -13,19 +13,20 @@ export default class Buffs extends Module {
 	static dependencies = [
 		'checklist',
 		'combatants',
+		'entityStatuses',
 		'invuln',
 	]
 
 	constructor(...args) {
 		super(...args)
 
-		this.addHook('complete', this._onComplete)
+		this.addEventHook('complete', this._onComplete)
 	}
 
 	_onComplete() {
 		this.checklist.add(new Rule({
 			name: <Trans id="sam.buffs.checklist.name"> Keep Shifu and Jinpu up </Trans>,
-			description: <Trans id= "sam.buffs.description"> <ActionLink {...ACTIONS.JINPU} /> increases your damage by 10% and <ActionLink {...ACTIONS.SHIFU} /> increases your speed by 10%. Both buffs are key part of Samurai's damage.</Trans>,
+			description: <Trans id= "sam.buffs.description"> <ActionLink {...ACTIONS.JINPU} /> and <ActionLink {...ACTIONS.SHIFU} /> increases your damage and speed by 13%. Both buffs are key part of Samurai's damage.</Trans>,
 			target: 95,
 			requirements: [
 				new Requirement({
@@ -43,7 +44,7 @@ export default class Buffs extends Module {
 	}
 
 	getUptimePercent(StatusId) {
-		const statusUptime = this.combatants.getStatusUptime((StatusId), this.parser.player.id)
+		const statusUptime = this.entityStatuses.getStatusUptime((StatusId), this.combatants.getEntities())
 		const fightUptime = this.parser.fightDuration - this.invuln.getInvulnerableUptime()
 
 		return (statusUptime / fightUptime) * 100

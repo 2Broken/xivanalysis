@@ -36,6 +36,11 @@ jobs:
             yarn lint:js --format junit -o reports/eslint/results.xml
             mkdir -p reports/tslint
             yarn lint:ts --format junit -o reports/tslint/results.xml
+      - run:
+          name: Ensure extract
+          command: |
+            chmod +x .circleci/check-extract.sh
+            ./.circleci/check-extract.sh
       - store_test_results:
           path: reports
 
@@ -48,7 +53,8 @@ jobs:
           name: Tests
           command: yarn test --ci --reporters=jest-junit
           environment:
-            JEST_JUNIT_OUTPUT: reports/jest/results.xml
+            JEST_JUNIT_OUTPUT_DIR: reports/jest
+            JEST_JUNIT_OUTPUT_NAME: results.xml
       - store_test_results:
           path: reports
 

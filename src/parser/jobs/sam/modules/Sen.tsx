@@ -31,38 +31,43 @@ const IAIJUTSU = [
 	ACTIONS.MIDARE_SETSUGEKKA.id,
 ]
 
-const KENKI_PER_SEN = 20
+const TSUBAME = [
+	ACTIONS.KAESHI_HIGANBANA.id,
+	ACTIONS.KAESHI_GOKEN.id,
+	ACTIONS.KAESHI_SETSUGEKKA.id,
+]
+
+const KENKI_PER_SEN = 10
 
 export default class Sen extends Module {
 	static handle = 'sen'
 
-	@dependency private kenki!: Kenki
 	@dependency private suggestions!: Suggestions
+	@dependency private kenki!: Kenki
 
 	private sen: {[S in SEN]?: boolean} = {}
+	private allowoverwrite: boolean = false
 	private wasted = 0
 
 	protected init() {
 		// Track sen gain
-		this.addHook(
+		this.addEventHook(
 			'cast',
 			{by: 'player', abilityId: Object.keys(SEN_ACTIONS).map(Number)},
 			this.onAction,
 		)
 
 		// Death, as well as all Iaijutsu, remove all available sen
-		this.addHook('cast', {by: 'player', abilityId: IAIJUTSU}, this.remove)
-		this.addHook('death', {to: 'player'}, this.remove)
-
-		// Hagakure because he's a speshul boi
-		this.addHook(
+		this.addEventHook('cast', {by: 'player', abilityId: IAIJUTSU}, this.remove)
+		this.addEventHook(
 			'cast',
 			{by: 'player', abilityId: ACTIONS.HAGAKURE.id},
 			this.onHagakure,
 		)
+		this.addEventHook('death', {to: 'player'}, this.remove)
 
 		// Suggestion time~
-		this.addHook('complete', this.onComplete)
+		this.addEventHook('complete', this.onComplete)
 	}
 
 	private onAction(event: CastEvent) {
@@ -80,14 +85,14 @@ export default class Sen extends Module {
 	}
 
 	private onHagakure() {
-		// Work out how many sen are currently active
-		const activeSen = Object.values(this.sen)
-			.filter(active => active)
-			.length
+	// work out how many sen are currently active
+	const activeSen = Object.values(this.sen)
+		.filter(active => active)
+		.length
 
-		// Add the new kenki, wipe the sen
-		this.kenki.modify(activeSen * KENKI_PER_SEN)
-		this.remove()
+	// add new kenki, wipe the sen
+	this.kenki.modify(activeSen * KENKI_PER_SEN)
+	this.remove()
 	}
 
 	private onComplete() {
